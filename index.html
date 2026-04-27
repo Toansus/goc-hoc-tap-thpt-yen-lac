@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Góc Học Tập V13 - Kiểm Duyệt & Đầy Đủ Môn</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
+    <style>
+        :root { --primary: #1abc9c; --secondary: #2c3e50; --accent: #e74c3c; --bg: #f4f7f6; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg); padding-bottom: 50px; }
+        header { background: var(--secondary); color: white; padding: 30px; text-align: center; }
+        
+        .container { display: flex; flex-wrap: wrap; padding: 20px 5%; gap: 20px; }
+        .main-content, .sidebar { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .main-content { flex: 2; min-width: 350px; }
+        .sidebar { flex: 1; min-width: 300px; height: fit-content; position: sticky; top: 20px; }
+
+        .search-box { width: 100%; padding: 15px; margin-bottom: 15px; border: 2px solid var(--primary); border-radius: 30px; outline: none; font-size: 1rem; }
+        .filter-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        
+        h2 { color: var(--secondary); margin-bottom: 20px; border-left: 5px solid var(--primary); padding-left: 10px; }
+        input, select, button { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; }
+        
+        /* Item tài liệu */
+        .doc-item { border-bottom: 1px solid #eee; padding: 20px 0; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
+        .badge-group { display: flex; gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
+        .badge { padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: white; }
+        .bg-grade { background: #34495e; }
+        .bg-subj { background: #3498db; }
+        .bg-level { background: #f1c40f; color: #333; }
+        
+        .download-count { display: flex; align-items: center; gap: 5px; color: var(--accent); font-weight: bold; font-size: 0.9rem; margin-top: 5px; }
+        .btn-action { padding: 8px 20px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; border: none; background: var(--primary); color: white; }
+
+        /* Admin Controls */
+        .admin-area { display: none; margin-top: 10px; padding: 10px; background: #fff9f0; border: 1px dashed orange; border-radius: 8px; gap: 5px; }
+        .btn-approve { background: #27ae60; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+        .btn-delete { background: #e74c3c; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+        #admin-lock { position: fixed; bottom: 15px; right: 15px; background: #333; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; z-index: 100; opacity: 0.7; }
+        
+        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 1000; justify-content: center; align-items: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">🚀 Đang xử lý dữ liệu...</div>
+    <div id="admin-lock" onclick="unlockAdmin()">🛡️ Chế độ Admin</div>
+
+    <header>
+        <h1>📚 Góc Học Tập - V13</h1>
+        <p>Hệ thống tài liệu đầy đủ & Kiểm duyệt an toàn</p>
+    </header>
+
+    <div class="container">
+        <div class="main-content">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 Tìm kiếm tài liệu..." onkeyup="renderDocs()">
+            
+            <div class="filter-bar">
+                <select id="filterGrade" onchange="renderDocs()">
+                    <option value="">-- Lớp --</option>
+                    <option value="10">Lớp 10</option>
+                    <option value="11">Lớp 11</option>
+                    <option value="12">Lớp 12</option>
+                </select>
+                <select id="filterSubject" onchange="renderDocs()">
+                    <option value="">-- Tất cả môn --</option>
+                    <optgroup label="Tự Nhiên">
+                        <option value="Toán">Toán Học</option>
+                        <option value="Lý">Vật Lý</option>
+                        <option value="Hóa">Hóa Học</option>
+                        <option value="Sinh">Sinh Học</option>
+                        <option value="Tin">Tin Học</option>
+                        <option value="CNCN">Công nghệ (CN)</option>
+                        <option value="CNNN">Công nghệ (NN)</option>
+                    </optgroup>
+                    <optgroup label="Xã Hội">
+                        <option value="Văn">Ngữ Văn</option>
+                        <option value="Sử">Lịch Sử</option>
+                        <option value="Địa">Địa Lý</option>
+                        <option value="GDCD">GDCD / KTPL</option>
+                        <option value="Anh">Tiếng Anh</option>
+                    </optgroup>
+                    <option value="Khác">Khác</option>
+                </select>
+                <select id="filterStatus" onchange="renderDocs()" style="display: none; border: 2px solid orange;">
+                    <option value="approved">Đã duyệt ✅</option>
+                    <option value="pending">Chờ duyệt ⏳</option>
+                </select>
+            </div>
+
+            <div id="document-list">Đang kết nối hệ thống...</div>
+        </div>
+
+        <div class="sidebar">
+            <h2>Đăng Tài Liệu</h2>
+            <input type="text" id="docName" placeholder="Tên tài liệu...">
+            
+            <select id="docGrade">
+                <option value="10">Lớp 10</option>
+                <option value="11">Lớp 11</option>
+                <option value="12">Lớp 12</option>
+            </select>
+
+            <select id="docSubject">
+                <option value="">-- Chọn môn học --</option>
+                <optgroup label="Tự Nhiên">
+                    <option value="Toán">Toán Học</option>
+                    <option value="Lý">Vật Lý</option>
+                    <option value="Hóa">Hóa Học</option>
+                    <option value="Sinh">Sinh Học</option>
+                    <option value="Tin">Tin Học</option>
+                    <option value="CNCN">Công nghệ (Công nghiệp)</option>
+                    <option value="CNNN">Công nghệ (Nông nghiệp)</option>
+                </optgroup>
+                <optgroup label="Xã Hội">
+                    <option value="Văn">Ngữ Văn</option>
+                    <option value="Sử">Lịch Sử</option>
+                    <option value="Địa">Địa Lý</option>
+                    <option value="GDCD">GDCD / KTPL</option>
+                    <option value="Anh">Tiếng Anh</option>
+                </optgroup>
+                <option value="Khác">Khác / Tài liệu chung</option>
+            </select>
+
+            <select id="docLevel">
+                <option value="Dễ">Mức độ: Dễ</option>
+                <option value="TB">Mức độ: Trung bình</option>
+                <option value="Khó">Mức độ: Khó / HSG</option>
+            </select>
+
+            <input type="text" id="driveURL" placeholder="Dán link Google Drive...">
+            
+            <button type="button" onclick="handlePost()" id="mainBtn" style="background: var(--primary); color: white; font-weight: bold; border: none; cursor: pointer;">GỬI DUYỆT TÀI LIỆU</button>
+            <p style="font-size: 0.7rem; color: #7f8c8d; text-align: center; margin-top: 5px;">* Tài liệu sẽ được Admin kiểm duyệt trước khi hiển thị.</p>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIBf30llPDcc53XUs7KBjjvF7fh1OLqDw",
+            authDomain: "ght-v5.firebaseapp.com",
+            projectId: "ght-v5",
+            storageBucket: "ght-v5.firebasestorage.app",
+            messagingSenderId: "850543407284",
+            appId: "1:850543407284:web:50f6b96f9421d256f6a7e1"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let allDocs = [];
+        let isAdmin = false;
+
+        // Hàm mở khóa Admin
+        window.unlockAdmin = function() {
+            const pass = prompt("Nhập mã bí mật của Admin:");
+            if(pass === "123456") { // Hãy đổi mã này theo ý bạn
+                isAdmin = true;
+                document.getElementById('filterStatus').style.display = 'block';
+                document.getElementById('admin-lock').style.background = "#27ae60";
+                document.getElementById('admin-lock').innerText = "🔓 Đang ở chế độ Admin";
+                renderDocs();
+            } else { alert("Sai mã!"); }
+        };
+
+        async function handlePost() {
+            const name = document.getElementById('docName').value;
+            const subject = document.getElementById('docSubject').value;
+            const url = document.getElementById('driveURL').value;
+
+            if(!name || !subject || !url) return alert("Vui lòng điền đủ thông tin!");
+
+            await db.collection("mod_docs").add({
+                title: name,
+                grade: document.getElementById('docGrade').value,
+                subject: subject,
+                level: document.getElementById('docLevel').value,
+                data: url,
+                status: "pending", // Trạng thái mặc định
+                downloads: 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert("Đã gửi tài liệu! Chờ Admin duyệt nhé.");
+            location.reload();
+        }
+
+        function init() {
+            // Sắp xếp theo lượt tải giảm dần
+            db.collection("mod_docs").orderBy("downloads", "desc").onSnapshot(snapshot => {
+                allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderDocs();
+            });
+        }
+
+        window.renderDocs = function() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const fGrade = document.getElementById('filterGrade').value;
+            const fSubject = document.getElementById('filterSubject').value;
+            const fStatus = isAdmin ? document.getElementById('filterStatus').value : "approved";
+
+            const filtered = allDocs.filter(d => {
+                return (d.status === fStatus) &&
+                       (d.title.toLowerCase().includes(search)) &&
+                       (fGrade === "" || d.grade === fGrade) &&
+                       (fSubject === "" || d.subject === fSubject);
+            });
+
+            let html = "";
+            filtered.forEach(d => {
+                html += `
+                    <div class="doc-item">
+                        <div>
+                            <div class="badge-group">
+                                <span class="badge bg-grade">Lớp ${d.grade}</span>
+                                <span class="badge bg-subj">${d.subject}</span>
+                                <span class="badge bg-level">${d.level}</span>
+                            </div>
+                            <strong>${d.title}</strong>
+                            <div class="download-count">🔥 ${d.downloads || 0} lượt truy cập</div>
+                            
+                            <div class="admin-area" style="display: ${isAdmin ? 'flex' : 'none'}">
+                                ${d.status === 'pending' ? `<button class="btn-approve" onclick="updateStatus('${d.id}', 'approved')">✅ Duyệt bài</button>` : ''}
+                                <button class="btn-delete" onclick="deleteDoc('${d.id}')">🗑️ Xóa bài</button>
+                            </div>
+                        </div>
+                        <button onclick="handleAction('${d.id}')" class="btn-action">XEM / TẢI ↗</button>
+                    </div>
+                `;
+            });
+            document.getElementById('document-list').innerHTML = html || "Không có tài liệu nào.";
+        }
+
+        window.updateStatus = async function(id, newStatus) {
+            await db.collection("mod_docs").doc(id).update({ status: newStatus });
+            alert("Đã duyệt thành công!");
+        };
+
+        window.deleteDoc = async function(id) {
+            if(confirm("Xóa tài liệu này khỏi hệ thống?")) {
+                await db.collection("mod_docs").doc(id).delete();
+            }
+        };
+
+        window.handleAction = async function(id) {
+            const docRef = db.collection("mod_docs").doc(id);
+            await docRef.update({ downloads: firebase.firestore.FieldValue.increment(1) });
+            const doc = await docRef.get();
+            window.open(doc.data().data, '_blank');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
