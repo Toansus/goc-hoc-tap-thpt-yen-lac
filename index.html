@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Góc Học Tập THPT Yên Lạc</title>
+    <title>Góc Học Tập THPT Yên Lạc - Secure</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+    
     <style>
         :root { --primary: #1abc9c; --secondary: #2c3e50; --accent: #e74c3c; --bg: #f4f7f6; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
@@ -23,8 +25,7 @@
         h2 { color: var(--secondary); margin-bottom: 20px; border-left: 5px solid var(--primary); padding-left: 10px; }
         input, select, button { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; }
         
-        /* Item tài liệu */
-        .doc-item { border-bottom: 1px solid #eee; padding: 20px 0; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
+        .doc-item { border-bottom: 1px solid #eee; padding: 20px 0; display: flex; justify-content: space-between; align-items: center; }
         .badge-group { display: flex; gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
         .badge { padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: white; }
         .bg-grade { background: #34495e; }
@@ -34,19 +35,33 @@
         .download-count { display: flex; align-items: center; gap: 5px; color: var(--accent); font-weight: bold; font-size: 0.9rem; margin-top: 5px; }
         .btn-action { padding: 8px 20px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; border: none; background: var(--primary); color: white; }
 
-        /* Admin Controls */
         .admin-area { display: none; margin-top: 10px; padding: 10px; background: #fff9f0; border: 1px dashed orange; border-radius: 8px; gap: 5px; }
         .btn-approve { background: #27ae60; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
         .btn-delete { background: #e74c3c; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-        #admin-lock { position: fixed; bottom: 15px; right: 15px; background: #333; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; z-index: 100; opacity: 0.7; }
+        
+        /* Nút và Modal Login */
+        #admin-btn { position: fixed; bottom: 15px; right: 15px; background: #333; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; z-index: 100; }
+        #login-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 320px; }
         
         #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 1000; justify-content: center; align-items: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay">🚀 Đang xử lý dữ liệu...</div>
-    <div id="admin-lock" onclick="unlockAdmin()">🛡️ Chế độ Admin</div>
+    <div id="loading-overlay">🚀 Đang xử lý...</div>
+    
+    <div id="login-modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 15px; color: var(--secondary);">Quản trị hệ thống</h3>
+            <input type="email" id="adminEmail" placeholder="Email quản trị...">
+            <input type="password" id="adminPass" placeholder="Mật khẩu...">
+            <button onclick="loginAdmin()" style="background: var(--secondary); color: white; border: none;">Đăng nhập</button>
+            <button onclick="closeModal()" style="background: #eee; color: #333; border: none;">Hủy</button>
+        </div>
+    </div>
+
+    <div id="admin-btn" onclick="openModal()">🛡️ Admin Login</div>
 
     <header>
         <h1>📚 Góc Học Tập - V1.0</h1>
@@ -58,31 +73,15 @@
             <input type="text" id="searchInput" class="search-box" placeholder="🔍 Tìm kiếm tài liệu..." onkeyup="renderDocs()">
             
             <div class="filter-bar">
-                <select id="filterGrade" onchange="renderDocs()">
-                    <option value="">-- Lớp --</option>
-                    <option value="10">Lớp 10</option>
-                    <option value="11">Lớp 11</option>
-                    <option value="12">Lớp 12</option>
-                </select>
+                <select id="filterGrade" onchange="renderDocs()"><option value="">-- Lớp --</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select>
                 <select id="filterSubject" onchange="renderDocs()">
                     <option value="">-- Tất cả môn --</option>
                     <optgroup label="Tự Nhiên">
-                        <option value="Toán">Toán Học</option>
-                        <option value="Lý">Vật Lý</option>
-                        <option value="Hóa">Hóa Học</option>
-                        <option value="Sinh">Sinh Học</option>
-                        <option value="Tin">Tin Học</option>
-                        <option value="CNCN">Công nghệ (CN)</option>
-                        <option value="CNNN">Công nghệ (NN)</option>
+                        <option value="Toán">Toán</option><option value="Lý">Lý</option><option value="Hóa">Hóa</option><option value="Sinh">Sinh</option><option value="Tin">Tin</option>
                     </optgroup>
                     <optgroup label="Xã Hội">
-                        <option value="Văn">Ngữ Văn</option>
-                        <option value="Sử">Lịch Sử</option>
-                        <option value="Địa">Địa Lý</option>
-                        <option value="GDCD">GDCD / KTPL</option>
-                        <option value="Anh">Tiếng Anh</option>
+                        <option value="Văn">Văn</option><option value="Sử">Sử</option><option value="Địa">Địa</option><option value="Anh">Anh</option>
                     </optgroup>
-                    <option value="Khác">Khác</option>
                 </select>
                 <select id="filterStatus" onchange="renderDocs()" style="display: none; border: 2px solid orange;">
                     <option value="approved">Đã duyệt ✅</option>
@@ -90,50 +89,20 @@
                 </select>
             </div>
 
-            <div id="document-list">Đang kết nối hệ thống...</div>
+            <div id="document-list">Đang tải...</div>
         </div>
 
         <div class="sidebar">
             <h2>Đăng Tài Liệu</h2>
             <input type="text" id="docName" placeholder="Tên tài liệu...">
-            
-            <select id="docGrade">
-                <option value="10">Lớp 10</option>
-                <option value="11">Lớp 11</option>
-                <option value="12">Lớp 12</option>
-            </select>
-
+            <select id="docGrade"><option value="10">Lớp 10</option><option value="11">Lớp 11</option><option value="12">Lớp 12</option></select>
             <select id="docSubject">
-                <option value="">-- Chọn môn học --</option>
-                <optgroup label="Tự Nhiên">
-                    <option value="Toán">Toán Học</option>
-                    <option value="Lý">Vật Lý</option>
-                    <option value="Hóa">Hóa Học</option>
-                    <option value="Sinh">Sinh Học</option>
-                    <option value="Tin">Tin Học</option>
-                    <option value="CNCN">Công nghệ (Công nghiệp)</option>
-                    <option value="CNNN">Công nghệ (Nông nghiệp)</option>
-                </optgroup>
-                <optgroup label="Xã Hội">
-                    <option value="Văn">Ngữ Văn</option>
-                    <option value="Sử">Lịch Sử</option>
-                    <option value="Địa">Địa Lý</option>
-                    <option value="GDCD">GDCD / KTPL</option>
-                    <option value="Anh">Tiếng Anh</option>
-                </optgroup>
-                <option value="Khác">Khác / Tài liệu chung</option>
+                <option value="Toán">Toán Học</option><option value="Văn">Ngữ Văn</option><option value="Anh">Tiếng Anh</option><option value="Lý">Vật Lý</option>
             </select>
-
-            <select id="docLevel">
-                <option value="Dễ">Mức độ: Dễ</option>
-                <option value="TB">Mức độ: Trung bình</option>
-                <option value="Khó">Mức độ: Khó / HSG</option>
-            </select>
-
-            <input type="text" id="driveURL" placeholder="Dán link Google Drive...">
+            <input type="text" id="driveURL" placeholder="Link Google Drive...">
+            <button type="button" onclick="handlePost()" style="background: var(--primary); color: white; font-weight: bold; border: none; cursor: pointer;">GỬI DUYỆT</button>
             
-            <button type="button" onclick="handlePost()" id="mainBtn" style="background: var(--primary); color: white; font-weight: bold; border: none; cursor: pointer;">GỬI DUYỆT TÀI LIỆU</button>
-            <p style="font-size: 0.7rem; color: #7f8c8d; text-align: center; margin-top: 5px;">* Tài liệu sẽ được Admin kiểm duyệt trước khi hiển thị.</p>
+            <button id="logout-btn" onclick="logoutAdmin()" style="display:none; background: #e74c3c; color: white; border: none; margin-top: 10px;">Đăng xuất Admin</button>
         </div>
     </div>
 
@@ -149,44 +118,63 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const auth = firebase.auth(); // Khởi tạo Auth
         let allDocs = [];
-        let isAdmin = false;
+        let currentAdmin = null;
 
-        // Hàm mở khóa Admin
-        window.unlockAdmin = function() {
-            const pass = prompt("Nhập mã bí mật của Admin:");
-            if(pass === "123456") { // Hãy đổi mã này theo ý bạn
-                isAdmin = true;
+        // Lắng nghe trạng thái đăng nhập
+        auth.onAuthStateChanged(user => {
+            currentAdmin = user;
+            if (user) {
                 document.getElementById('filterStatus').style.display = 'block';
-                document.getElementById('admin-lock').style.background = "#27ae60";
-                document.getElementById('admin-lock').innerText = "🔓 Đang ở chế độ Admin";
-                renderDocs();
-            } else { alert("Sai mã!"); }
+                document.getElementById('logout-btn').style.display = 'block';
+                document.getElementById('admin-btn').innerText = "🔓 Admin: " + user.email;
+                document.getElementById('admin-btn').style.background = "#27ae60";
+            } else {
+                document.getElementById('filterStatus').style.display = 'none';
+                document.getElementById('logout-btn').style.display = 'none';
+                document.getElementById('admin-btn').innerText = "🛡️ Admin Login";
+                document.getElementById('admin-btn').style.background = "#333";
+            }
+            renderDocs();
+        });
+
+        window.openModal = () => document.getElementById('login-modal').style.display = 'flex';
+        window.closeModal = () => document.getElementById('login-modal').style.display = 'none';
+
+        window.loginAdmin = async () => {
+            const email = document.getElementById('adminEmail').value;
+            const pass = document.getElementById('adminPass').value;
+            try {
+                await auth.signInWithEmailAndPassword(email, pass);
+                closeModal();
+                alert("Đăng nhập thành công!");
+            } catch (e) {
+                alert("Sai tài khoản hoặc mật khẩu!");
+            }
         };
+
+        window.logoutAdmin = () => auth.signOut();
 
         async function handlePost() {
             const name = document.getElementById('docName').value;
-            const subject = document.getElementById('docSubject').value;
             const url = document.getElementById('driveURL').value;
-
-            if(!name || !subject || !url) return alert("Vui lòng điền đủ thông tin!");
+            if(!name || !url) return alert("Vui lòng điền đủ thông tin!");
 
             await db.collection("mod_docs").add({
                 title: name,
                 grade: document.getElementById('docGrade').value,
-                subject: subject,
-                level: document.getElementById('docLevel').value,
+                subject: document.getElementById('docSubject').value,
                 data: url,
-                status: "pending", // Trạng thái mặc định
+                status: "pending",
                 downloads: 0,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            alert("Đã gửi tài liệu! Chờ Admin duyệt nhé.");
+            alert("Đã gửi tài liệu thành công!");
             location.reload();
         }
 
         function init() {
-            // Sắp xếp theo lượt tải giảm dần
             db.collection("mod_docs").orderBy("downloads", "desc").onSnapshot(snapshot => {
                 allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderDocs();
@@ -195,16 +183,9 @@
 
         window.renderDocs = function() {
             const search = document.getElementById('searchInput').value.toLowerCase();
-            const fGrade = document.getElementById('filterGrade').value;
-            const fSubject = document.getElementById('filterSubject').value;
-            const fStatus = isAdmin ? document.getElementById('filterStatus').value : "approved";
+            const fStatus = currentAdmin ? document.getElementById('filterStatus').value : "approved";
 
-            const filtered = allDocs.filter(d => {
-                return (d.status === fStatus) &&
-                       (d.title.toLowerCase().includes(search)) &&
-                       (fGrade === "" || d.grade === fGrade) &&
-                       (fSubject === "" || d.subject === fSubject);
-            });
+            const filtered = allDocs.filter(d => (d.status === fStatus) && d.title.toLowerCase().includes(search));
 
             let html = "";
             filtered.forEach(d => {
@@ -214,35 +195,31 @@
                             <div class="badge-group">
                                 <span class="badge bg-grade">Lớp ${d.grade}</span>
                                 <span class="badge bg-subj">${d.subject}</span>
-                                <span class="badge bg-level">${d.level}</span>
                             </div>
                             <strong>${d.title}</strong>
-                            <div class="download-count">🔥 ${d.downloads || 0} lượt truy cập</div>
+                            <div class="download-count">🔥 ${d.downloads || 0} lượt</div>
                             
-                            <div class="admin-area" style="display: ${isAdmin ? 'flex' : 'none'}">
-                                ${d.status === 'pending' ? `<button class="btn-approve" onclick="updateStatus('${d.id}', 'approved')">✅ Duyệt bài</button>` : ''}
-                                <button class="btn-delete" onclick="deleteDoc('${d.id}')">🗑️ Xóa bài</button>
+                            <div class="admin-area" style="display: ${currentAdmin ? 'flex' : 'none'}">
+                                ${d.status === 'pending' ? `<button class="btn-approve" onclick="updateStatus('${d.id}')">✅ Duyệt</button>` : ''}
+                                <button class="btn-delete" onclick="deleteDoc('${d.id}')">🗑️ Xóa</button>
                             </div>
                         </div>
-                        <button onclick="handleAction('${d.id}')" class="btn-action">XEM / TẢI ↗</button>
+                        <button onclick="handleAction('${d.id}')" class="btn-action">XEM ↗</button>
                     </div>
                 `;
             });
-            document.getElementById('document-list').innerHTML = html || "Không có tài liệu nào.";
+            document.getElementById('document-list').innerHTML = html || "Không có tài liệu.";
         }
 
-        window.updateStatus = async function(id, newStatus) {
-            await db.collection("mod_docs").doc(id).update({ status: newStatus });
-            alert("Đã duyệt thành công!");
+        window.updateStatus = async (id) => {
+            await db.collection("mod_docs").doc(id).update({ status: "approved" });
         };
 
-        window.deleteDoc = async function(id) {
-            if(confirm("Xóa tài liệu này khỏi hệ thống?")) {
-                await db.collection("mod_docs").doc(id).delete();
-            }
+        window.deleteDoc = async (id) => {
+            if(confirm("Xóa tài liệu này?")) await db.collection("mod_docs").doc(id).delete();
         };
 
-        window.handleAction = async function(id) {
+        window.handleAction = async (id) => {
             const docRef = db.collection("mod_docs").doc(id);
             await docRef.update({ downloads: firebase.firestore.FieldValue.increment(1) });
             const doc = await docRef.get();
