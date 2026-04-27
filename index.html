@@ -3,99 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Góc Học Tập - V17</title>
+    <title>Góc Học Tập V18</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-storage-compat.js"></script>
-    
     <style>
         :root { --primary: #1abc9c; --secondary: #2c3e50; --accent: #e74c3c; --bg: #f4f7f6; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: var(--bg); padding-bottom: 50px; }
-        header { background: var(--secondary); color: white; padding: 30px; text-align: center; }
-        .container { display: flex; flex-wrap: wrap; padding: 20px 5%; gap: 20px; }
-        .main-content, .sidebar { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .main-content { flex: 2; min-width: 350px; }
-        .sidebar { flex: 1; min-width: 300px; height: fit-content; position: sticky; top: 20px; }
-        input, select, button { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; }
-        
-        .doc-item { border-bottom: 1px solid #eee; padding: 20px 0; display: flex; justify-content: space-between; align-items: center; }
-        .badge { padding: 3px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; color: white; background: var(--primary); margin-right: 5px; }
-        .bg-grade { background: var(--secondary); }
-        
-        .admin-controls { display: none; margin-top: 10px; padding: 10px; background: #fff4f4; border: 1px dashed var(--accent); border-radius: 8px; gap: 8px; }
-        #admin-login-trigger { position: fixed; bottom: 15px; right: 15px; background: #333; color: white; padding: 10px 20px; border-radius: 30px; cursor: pointer; z-index: 100; font-size: 0.8rem; }
-        
-        #login-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-box { background: white; padding: 30px; border-radius: 12px; width: 320px; }
-        
-        .progress-container { height: 8px; background: #eee; border-radius: 4px; margin-bottom: 10px; display: none; overflow: hidden; }
-        .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: 0.3s; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
+        .container { display: flex; flex-wrap: wrap; gap: 20px; max-width: 1200px; margin: auto; }
+        .main-content, .sidebar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .main-content { flex: 2; } .sidebar { flex: 1; min-width: 300px; }
+        input, select, button { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #ddd; }
+        .doc-item { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
+        .badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
+        #admin-status { position: fixed; bottom: 10px; right: 10px; background: #333; color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="login-modal">
-        <div class="modal-box">
-            <h3 style="margin-bottom: 15px;">Admin Đăng Nhập</h3>
-            <input type="email" id="loginEmail" placeholder="Email...">
-            <input type="password" id="loginPass" placeholder="Mật khẩu...">
-            <button onclick="doLogin()" style="background: var(--secondary); color: white;">Vào hệ thống</button>
-            <button onclick="document.getElementById('login-modal').style.display='none'">Đóng</button>
-        </div>
-    </div>
-
-    <div id="admin-login-trigger" onclick="document.getElementById('login-modal').style.display='flex'">🛡️ Admin Login</div>
-
-    <header>
-        <h1>📚 Góc Học Tập - V17</h1>
-        <p>Hệ thống chia sẻ tài liệu THPT</p>
+    <header style="text-align: center; margin-bottom: 30px;">
+        <h1>📚 Góc Học Tập THPT</h1>
     </header>
 
     <div class="container">
         <div class="main-content">
-            <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm tài liệu..." onkeyup="renderDocs()">
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;">
-                <select id="fGrade" onchange="renderDocs()"><option value="">-- Lớp --</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select>
-                <select id="fSubject" onchange="renderDocs()">
-                    <option value="">-- Môn học --</option>
-                    <option value="Toán">Toán</option><option value="Vật lý">Vật lý</option><option value="Hóa học">Hóa học</option>
-                    <option value="Sinh học">Sinh học</option><option value="Tin học">Tin học</option><option value="Ngữ văn">Ngữ văn</option>
-                    <option value="Lịch sử">Lịch sử</option><option value="Địa lý">Địa lý</option><option value="KT&PL">KT&PL</option>
-                    <option value="CNNN">CNNN</option><option value="CNCN">CNCN</option><option value="Khác">Khác</option>
-                </select>
-                <select id="fStatus" onchange="renderDocs()" style="display: none; border-color: orange;">
-                    <option value="approved">Đã duyệt ✅</option><option value="pending">Chờ duyệt ⏳</option>
-                </select>
-            </div>
+            <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm..." onkeyup="renderDocs()">
             <div id="document-list">Đang tải...</div>
         </div>
 
         <div class="sidebar">
-            <h2>Đăng Tài Liệu</h2>
+            <h3>Đăng Tài Liệu</h3>
             <input type="text" id="docName" placeholder="Tên tài liệu...">
-            <select id="docGrade"><option value="10">Lớp 10</option><option value="11">Lớp 11</option><option value="12">Lớp 12</option></select>
-            <select id="docSub">
+            <select id="docSubject">
                 <option value="Toán">Toán</option><option value="Vật lý">Vật lý</option><option value="Hóa học">Hóa học</option>
                 <option value="Sinh học">Sinh học</option><option value="Tin học">Tin học</option><option value="Ngữ văn">Ngữ văn</option>
                 <option value="Lịch sử">Lịch sử</option><option value="Địa lý">Địa lý</option><option value="KT&PL">KT&PL</option>
                 <option value="CNNN">CNNN</option><option value="CNCN">CNCN</option><option value="Khác">Khác</option>
             </select>
-
-            <div style="background: #f0f2f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
-                <input type="text" id="driveUrl" placeholder="Link Google Drive">
-                <p style="text-align: center; font-size: 0.7rem; margin: 5px 0;">HOẶC</p>
-                <input type="file" id="fileInput">
-                <p style="font-size: 0.6rem; color: var(--accent);">* Tải trực tiếp tối đa 10MB</p>
-            </div>
-            
-            <div class="progress-container" id="progCont"><div class="progress-bar" id="progBar"></div></div>
-            <button onclick="handleUpload()" id="btnSubmit" style="background: var(--primary); color: white; font-weight: bold;">GỬI TÀI LIỆU</button>
-            <button id="logoutBtn" onclick="auth.signOut()" style="display:none; background: #95a5a6; color: white;">Đăng xuất Admin</button>
+            <input type="file" id="fileInput">
+            <button onclick="handlePost()" id="btnSubmit" style="background: var(--primary); color: white;">GỬI DUYỆT</button>
         </div>
     </div>
+
+    <div id="admin-status" onclick="loginAdmin()">🛡️ Admin Login</div>
 
     <script>
         const firebaseConfig = {
@@ -106,102 +57,63 @@
             messagingSenderId: "850543407284",
             appId: "1:850543407284:web:50f6b96f9421d256f6a7e1"
         };
-
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const auth = firebase.auth();
         const storage = firebase.storage();
+        const auth = firebase.auth();
         let allDocs = [];
-        let currentAdmin = null;
+        let isAdmin = false;
 
         auth.onAuthStateChanged(user => {
-            currentAdmin = user;
-            document.getElementById('fStatus').style.display = user ? 'block' : 'none';
-            document.getElementById('logoutBtn').style.display = user ? 'block' : 'none';
-            document.getElementById('admin-login-trigger').innerText = user ? "🔓 Admin: " + user.email : "🛡️ Admin Login";
+            isAdmin = !!user;
+            document.getElementById('admin-status').innerText = user ? "🔓 Admin: " + user.email : "🛡️ Admin Login";
             renderDocs();
         });
 
-        async function doLogin() {
-            try {
-                await auth.signInWithEmailAndPassword(document.getElementById('loginEmail').value, document.getElementById('loginPass').value);
-                document.getElementById('login-modal').style.display = 'none';
-            } catch (e) { alert("Sai thông tin!"); }
+        async function loginAdmin() {
+            if(isAdmin) return auth.signOut();
+            const email = prompt("Email Admin:");
+            const pass = prompt("Mật khẩu:");
+            try { await auth.signInWithEmailAndPassword(email, pass); } catch(e) { alert("Lỗi!"); }
         }
 
-        async function handleUpload() {
+        async function handlePost() {
             const name = document.getElementById('docName').value;
+            const sub = document.getElementById('docSubject').value;
             const file = document.getElementById('fileInput').files[0];
-            const drive = document.getElementById('driveUrl').value;
             const btn = document.getElementById('btnSubmit');
 
-            if(!name) return alert("Vui lòng nhập tên!");
+            if(!name || !file) return alert("Thiếu thông tin!");
+            if(file.size > 10 * 1024 * 1024) return alert("File quá lớn!");
+
             btn.disabled = true;
-            let finalLink = drive;
-
-            if(file) {
-                if(file.size > 10 * 1024 * 1024) { btn.disabled = false; return alert("File quá lớn!"); }
-                document.getElementById('progCont').style.display = 'block';
-                const ref = storage.ref(`v17/${Date.now()}_${file.name}`);
-                const task = ref.put(file);
-                await new Promise((res, rej) => {
-                    task.on('state_changed', 
-                        s => document.getElementById('progBar').style.width = (s.bytesTransferred/s.totalBytes)*100 + "%",
-                        e => rej(e),
-                        async () => { finalLink = await ref.getDownloadURL(); res(); }
-                    );
-                });
-            }
-
-            if(!finalLink) { btn.disabled = false; return alert("Cần link hoặc file!"); }
+            const ref = storage.ref(`v18/${Date.now()}_${file.name}`);
+            await ref.put(file);
+            const url = await ref.getDownloadURL();
 
             await db.collection("mod_docs").add({
-                title: name, grade: document.getElementById('docGrade').value,
-                subject: document.getElementById('docSub').value, data: finalLink,
-                status: "pending", downloads: 0, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                title: name, subject: sub, data: url, status: "pending", downloads: 0, createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            alert("Đã gửi bài thành công!");
-            location.reload();
+            alert("Thành công!"); location.reload();
         }
 
         function renderDocs() {
             const search = document.getElementById('searchInput').value.toLowerCase();
-            const grade = document.getElementById('fGrade').value;
-            const subject = document.getElementById('fSubject').value;
-            const status = currentAdmin ? document.getElementById('fStatus').value : "approved";
-
-            const filtered = allDocs.filter(d => 
-                d.status === status && d.title.toLowerCase().includes(search) &&
-                (grade === "" || d.grade === grade) && (subject === "" || d.subject === subject)
-            );
-
+            const filtered = allDocs.filter(d => d.status === (isAdmin ? "pending" : "approved") && d.title.toLowerCase().includes(search));
+            
             let html = "";
             filtered.forEach(d => {
-                html += `
-                    <div class="doc-item">
-                        <div>
-                            <span class="badge bg-grade">Lớp ${d.grade}</span>
-                            <span class="badge">${d.subject}</span>
-                            <strong>${d.title}</strong>
-                            <div style="font-size:0.8rem; color:var(--accent); margin-top:5px;">🔥 ${d.downloads} lượt xem</div>
-                            <div class="admin-controls" style="display: ${currentAdmin ? 'flex' : 'none'}">
-                                ${d.status==='pending' ? `<button onclick="db.collection('mod_docs').doc('${d.id}').update({status:'approved'})">✅ Duyệt</button>` : ''}
-                                <button onclick="if(confirm('Xóa?')) db.collection('mod_docs').doc('${d.id}').delete()">🗑️ Xóa</button>
-                            </div>
-                        </div>
-                        <button onclick="viewDoc('${d.id}','${d.data}')" style="background:var(--primary); color:white; border:none; padding:8px 15px; border-radius:8px; cursor:pointer;">XEM ↗</button>
-                    </div>`;
+                html += `<div class="doc-item">
+                    <div><span class="badge">${d.subject}</span> <strong>${d.title}</strong></div>
+                    <button onclick="window.open('${d.data}')">XEM</button>
+                    ${isAdmin ? `<button onclick="db.collection('mod_docs').doc('${d.id}').update({status:'approved'})">DUYỆT</button>` : ''}
+                </div>`;
             });
-            document.getElementById('document-list').innerHTML = html || "Không có dữ liệu.";
+            document.getElementById('document-list').innerHTML = html || "Trống.";
         }
 
-        window.viewDoc = async (id, url) => {
-            await db.collection("mod_docs").doc(id).update({ downloads: firebase.firestore.FieldValue.increment(1) });
-            window.open(url, '_blank');
-        };
-
-        db.collection("mod_docs").orderBy("downloads", "desc").onSnapshot(snap => {
-            allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        db.collection("mod_docs").onSnapshot(s => {
+            allDocs = s.docs.map(d => ({id: d.id, ...d.data()}));
             renderDocs();
         });
     </script>
