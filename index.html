@@ -3,92 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Góc Học Tập THPT Yên Lạc - Secure</title>
+    <title>Góc Học Tập - V17</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-storage-compat.js"></script>
     
     <style>
         :root { --primary: #1abc9c; --secondary: #2c3e50; --accent: #e74c3c; --bg: #f4f7f6; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background-color: var(--bg); padding-bottom: 50px; }
         header { background: var(--secondary); color: white; padding: 30px; text-align: center; }
-        
         .container { display: flex; flex-wrap: wrap; padding: 20px 5%; gap: 20px; }
         .main-content, .sidebar { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .main-content { flex: 2; min-width: 350px; }
         .sidebar { flex: 1; min-width: 300px; height: fit-content; position: sticky; top: 20px; }
-
-        .search-box { width: 100%; padding: 15px; margin-bottom: 15px; border: 2px solid var(--primary); border-radius: 30px; outline: none; font-size: 1rem; }
-        .filter-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        
-        h2 { color: var(--secondary); margin-bottom: 20px; border-left: 5px solid var(--primary); padding-left: 10px; }
         input, select, button { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; }
         
         .doc-item { border-bottom: 1px solid #eee; padding: 20px 0; display: flex; justify-content: space-between; align-items: center; }
-        .badge-group { display: flex; gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
-        .badge { padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: white; }
-        .bg-grade { background: #34495e; }
-        .bg-subj { background: #3498db; }
-        .bg-level { background: #f1c40f; color: #333; }
+        .badge { padding: 3px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; color: white; background: var(--primary); margin-right: 5px; }
+        .bg-grade { background: var(--secondary); }
         
-        .download-count { display: flex; align-items: center; gap: 5px; color: var(--accent); font-weight: bold; font-size: 0.9rem; margin-top: 5px; }
-        .btn-action { padding: 8px 20px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; border: none; background: var(--primary); color: white; }
-
-        .admin-area { display: none; margin-top: 10px; padding: 10px; background: #fff9f0; border: 1px dashed orange; border-radius: 8px; gap: 5px; }
-        .btn-approve { background: #27ae60; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-        .btn-delete { background: #e74c3c; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+        .admin-controls { display: none; margin-top: 10px; padding: 10px; background: #fff4f4; border: 1px dashed var(--accent); border-radius: 8px; gap: 8px; }
+        #admin-login-trigger { position: fixed; bottom: 15px; right: 15px; background: #333; color: white; padding: 10px 20px; border-radius: 30px; cursor: pointer; z-index: 100; font-size: 0.8rem; }
         
-        /* Nút và Modal Login */
-        #admin-btn { position: fixed; bottom: 15px; right: 15px; background: #333; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; z-index: 100; }
         #login-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 320px; }
+        .modal-box { background: white; padding: 30px; border-radius: 12px; width: 320px; }
         
-        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 1000; justify-content: center; align-items: center; font-weight: bold; }
+        .progress-container { height: 8px; background: #eee; border-radius: 4px; margin-bottom: 10px; display: none; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: 0.3s; }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay">🚀 Đang xử lý...</div>
-    
     <div id="login-modal">
-        <div class="modal-content">
-            <h3 style="margin-bottom: 15px; color: var(--secondary);">Quản trị hệ thống</h3>
-            <input type="email" id="adminEmail" placeholder="Email quản trị...">
-            <input type="password" id="adminPass" placeholder="Mật khẩu...">
-            <button onclick="loginAdmin()" style="background: var(--secondary); color: white; border: none;">Đăng nhập</button>
-            <button onclick="closeModal()" style="background: #eee; color: #333; border: none;">Hủy</button>
+        <div class="modal-box">
+            <h3 style="margin-bottom: 15px;">Admin Đăng Nhập</h3>
+            <input type="email" id="loginEmail" placeholder="Email...">
+            <input type="password" id="loginPass" placeholder="Mật khẩu...">
+            <button onclick="doLogin()" style="background: var(--secondary); color: white;">Vào hệ thống</button>
+            <button onclick="document.getElementById('login-modal').style.display='none'">Đóng</button>
         </div>
     </div>
 
-    <div id="admin-btn" onclick="openModal()">🛡️ Admin Login</div>
+    <div id="admin-login-trigger" onclick="document.getElementById('login-modal').style.display='flex'">🛡️ Admin Login</div>
 
     <header>
-        <h1>📚 Góc Học Tập - V1.0</h1>
-        <p>Hệ thống tài liệu đầy đủ & Kiểm duyệt an toàn</p>
+        <h1>📚 Góc Học Tập - V17</h1>
+        <p>Hệ thống chia sẻ tài liệu THPT</p>
     </header>
 
     <div class="container">
         <div class="main-content">
-            <input type="text" id="searchInput" class="search-box" placeholder="🔍 Tìm kiếm tài liệu..." onkeyup="renderDocs()">
+            <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm tài liệu..." onkeyup="renderDocs()">
             
-            <div class="filter-bar">
-                <select id="filterGrade" onchange="renderDocs()"><option value="">-- Lớp --</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select>
-                <select id="filterSubject" onchange="renderDocs()">
-                    <option value="">-- Tất cả môn --</option>
-                    <optgroup label="Tự Nhiên">
-                        <option value="Toán">Toán</option><option value="Lý">Lý</option><option value="Hóa">Hóa</option><option value="Sinh">Sinh</option><option value="Tin">Tin</option>
-                    </optgroup>
-                    <optgroup label="Xã Hội">
-                        <option value="Văn">Văn</option><option value="Sử">Sử</option><option value="Địa">Địa</option><option value="Anh">Anh</option>
-                    </optgroup>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                <select id="fGrade" onchange="renderDocs()"><option value="">-- Lớp --</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select>
+                <select id="fSubject" onchange="renderDocs()">
+                    <option value="">-- Môn học --</option>
+                    <option value="Toán">Toán</option><option value="Vật lý">Vật lý</option><option value="Hóa học">Hóa học</option>
+                    <option value="Sinh học">Sinh học</option><option value="Tin học">Tin học</option><option value="Ngữ văn">Ngữ văn</option>
+                    <option value="Lịch sử">Lịch sử</option><option value="Địa lý">Địa lý</option><option value="KT&PL">KT&PL</option>
+                    <option value="CNNN">CNNN</option><option value="CNCN">CNCN</option><option value="Khác">Khác</option>
                 </select>
-                <select id="filterStatus" onchange="renderDocs()" style="display: none; border: 2px solid orange;">
-                    <option value="approved">Đã duyệt ✅</option>
-                    <option value="pending">Chờ duyệt ⏳</option>
+                <select id="fStatus" onchange="renderDocs()" style="display: none; border-color: orange;">
+                    <option value="approved">Đã duyệt ✅</option><option value="pending">Chờ duyệt ⏳</option>
                 </select>
             </div>
-
             <div id="document-list">Đang tải...</div>
         </div>
 
@@ -96,13 +77,23 @@
             <h2>Đăng Tài Liệu</h2>
             <input type="text" id="docName" placeholder="Tên tài liệu...">
             <select id="docGrade"><option value="10">Lớp 10</option><option value="11">Lớp 11</option><option value="12">Lớp 12</option></select>
-            <select id="docSubject">
-                <option value="Toán">Toán Học</option><option value="Văn">Ngữ Văn</option><option value="Anh">Tiếng Anh</option><option value="Lý">Vật Lý</option>
+            <select id="docSub">
+                <option value="Toán">Toán</option><option value="Vật lý">Vật lý</option><option value="Hóa học">Hóa học</option>
+                <option value="Sinh học">Sinh học</option><option value="Tin học">Tin học</option><option value="Ngữ văn">Ngữ văn</option>
+                <option value="Lịch sử">Lịch sử</option><option value="Địa lý">Địa lý</option><option value="KT&PL">KT&PL</option>
+                <option value="CNNN">CNNN</option><option value="CNCN">CNCN</option><option value="Khác">Khác</option>
             </select>
-            <input type="text" id="driveURL" placeholder="Link Google Drive...">
-            <button type="button" onclick="handlePost()" style="background: var(--primary); color: white; font-weight: bold; border: none; cursor: pointer;">GỬI DUYỆT</button>
+
+            <div style="background: #f0f2f1; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                <input type="text" id="driveUrl" placeholder="Link Google Drive">
+                <p style="text-align: center; font-size: 0.7rem; margin: 5px 0;">HOẶC</p>
+                <input type="file" id="fileInput">
+                <p style="font-size: 0.6rem; color: var(--accent);">* Tải trực tiếp tối đa 10MB</p>
+            </div>
             
-            <button id="logout-btn" onclick="logoutAdmin()" style="display:none; background: #e74c3c; color: white; border: none; margin-top: 10px;">Đăng xuất Admin</button>
+            <div class="progress-container" id="progCont"><div class="progress-bar" id="progBar"></div></div>
+            <button onclick="handleUpload()" id="btnSubmit" style="background: var(--primary); color: white; font-weight: bold;">GỬI TÀI LIỆU</button>
+            <button id="logoutBtn" onclick="auth.signOut()" style="display:none; background: #95a5a6; color: white;">Đăng xuất Admin</button>
         </div>
     </div>
 
@@ -118,115 +109,101 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const auth = firebase.auth(); // Khởi tạo Auth
+        const auth = firebase.auth();
+        const storage = firebase.storage();
         let allDocs = [];
         let currentAdmin = null;
 
-        // Lắng nghe trạng thái đăng nhập
         auth.onAuthStateChanged(user => {
             currentAdmin = user;
-            if (user) {
-                document.getElementById('filterStatus').style.display = 'block';
-                document.getElementById('logout-btn').style.display = 'block';
-                document.getElementById('admin-btn').innerText = "🔓 Admin: " + user.email;
-                document.getElementById('admin-btn').style.background = "#27ae60";
-            } else {
-                document.getElementById('filterStatus').style.display = 'none';
-                document.getElementById('logout-btn').style.display = 'none';
-                document.getElementById('admin-btn').innerText = "🛡️ Admin Login";
-                document.getElementById('admin-btn').style.background = "#333";
-            }
+            document.getElementById('fStatus').style.display = user ? 'block' : 'none';
+            document.getElementById('logoutBtn').style.display = user ? 'block' : 'none';
+            document.getElementById('admin-login-trigger').innerText = user ? "🔓 Admin: " + user.email : "🛡️ Admin Login";
             renderDocs();
         });
 
-        window.openModal = () => document.getElementById('login-modal').style.display = 'flex';
-        window.closeModal = () => document.getElementById('login-modal').style.display = 'none';
-
-        window.loginAdmin = async () => {
-            const email = document.getElementById('adminEmail').value;
-            const pass = document.getElementById('adminPass').value;
+        async function doLogin() {
             try {
-                await auth.signInWithEmailAndPassword(email, pass);
-                closeModal();
-                alert("Đăng nhập thành công!");
-            } catch (e) {
-                alert("Sai tài khoản hoặc mật khẩu!");
-            }
-        };
+                await auth.signInWithEmailAndPassword(document.getElementById('loginEmail').value, document.getElementById('loginPass').value);
+                document.getElementById('login-modal').style.display = 'none';
+            } catch (e) { alert("Sai thông tin!"); }
+        }
 
-        window.logoutAdmin = () => auth.signOut();
-
-        async function handlePost() {
+        async function handleUpload() {
             const name = document.getElementById('docName').value;
-            const url = document.getElementById('driveURL').value;
-            if(!name || !url) return alert("Vui lòng điền đủ thông tin!");
+            const file = document.getElementById('fileInput').files[0];
+            const drive = document.getElementById('driveUrl').value;
+            const btn = document.getElementById('btnSubmit');
+
+            if(!name) return alert("Vui lòng nhập tên!");
+            btn.disabled = true;
+            let finalLink = drive;
+
+            if(file) {
+                if(file.size > 10 * 1024 * 1024) { btn.disabled = false; return alert("File quá lớn!"); }
+                document.getElementById('progCont').style.display = 'block';
+                const ref = storage.ref(`v17/${Date.now()}_${file.name}`);
+                const task = ref.put(file);
+                await new Promise((res, rej) => {
+                    task.on('state_changed', 
+                        s => document.getElementById('progBar').style.width = (s.bytesTransferred/s.totalBytes)*100 + "%",
+                        e => rej(e),
+                        async () => { finalLink = await ref.getDownloadURL(); res(); }
+                    );
+                });
+            }
+
+            if(!finalLink) { btn.disabled = false; return alert("Cần link hoặc file!"); }
 
             await db.collection("mod_docs").add({
-                title: name,
-                grade: document.getElementById('docGrade').value,
-                subject: document.getElementById('docSubject').value,
-                data: url,
-                status: "pending",
-                downloads: 0,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                title: name, grade: document.getElementById('docGrade').value,
+                subject: document.getElementById('docSub').value, data: finalLink,
+                status: "pending", downloads: 0, createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            alert("Đã gửi tài liệu thành công!");
+            alert("Đã gửi bài thành công!");
             location.reload();
         }
 
-        function init() {
-            db.collection("mod_docs").orderBy("downloads", "desc").onSnapshot(snapshot => {
-                allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderDocs();
-            });
-        }
-
-        window.renderDocs = function() {
+        function renderDocs() {
             const search = document.getElementById('searchInput').value.toLowerCase();
-            const fStatus = currentAdmin ? document.getElementById('filterStatus').value : "approved";
+            const grade = document.getElementById('fGrade').value;
+            const subject = document.getElementById('fSubject').value;
+            const status = currentAdmin ? document.getElementById('fStatus').value : "approved";
 
-            const filtered = allDocs.filter(d => (d.status === fStatus) && d.title.toLowerCase().includes(search));
+            const filtered = allDocs.filter(d => 
+                d.status === status && d.title.toLowerCase().includes(search) &&
+                (grade === "" || d.grade === grade) && (subject === "" || d.subject === subject)
+            );
 
             let html = "";
             filtered.forEach(d => {
                 html += `
                     <div class="doc-item">
                         <div>
-                            <div class="badge-group">
-                                <span class="badge bg-grade">Lớp ${d.grade}</span>
-                                <span class="badge bg-subj">${d.subject}</span>
-                            </div>
+                            <span class="badge bg-grade">Lớp ${d.grade}</span>
+                            <span class="badge">${d.subject}</span>
                             <strong>${d.title}</strong>
-                            <div class="download-count">🔥 ${d.downloads || 0} lượt</div>
-                            
-                            <div class="admin-area" style="display: ${currentAdmin ? 'flex' : 'none'}">
-                                ${d.status === 'pending' ? `<button class="btn-approve" onclick="updateStatus('${d.id}')">✅ Duyệt</button>` : ''}
-                                <button class="btn-delete" onclick="deleteDoc('${d.id}')">🗑️ Xóa</button>
+                            <div style="font-size:0.8rem; color:var(--accent); margin-top:5px;">🔥 ${d.downloads} lượt xem</div>
+                            <div class="admin-controls" style="display: ${currentAdmin ? 'flex' : 'none'}">
+                                ${d.status==='pending' ? `<button onclick="db.collection('mod_docs').doc('${d.id}').update({status:'approved'})">✅ Duyệt</button>` : ''}
+                                <button onclick="if(confirm('Xóa?')) db.collection('mod_docs').doc('${d.id}').delete()">🗑️ Xóa</button>
                             </div>
                         </div>
-                        <button onclick="handleAction('${d.id}')" class="btn-action">XEM ↗</button>
-                    </div>
-                `;
+                        <button onclick="viewDoc('${d.id}','${d.data}')" style="background:var(--primary); color:white; border:none; padding:8px 15px; border-radius:8px; cursor:pointer;">XEM ↗</button>
+                    </div>`;
             });
-            document.getElementById('document-list').innerHTML = html || "Không có tài liệu.";
+            document.getElementById('document-list').innerHTML = html || "Không có dữ liệu.";
         }
 
-        window.updateStatus = async (id) => {
-            await db.collection("mod_docs").doc(id).update({ status: "approved" });
+        window.viewDoc = async (id, url) => {
+            await db.collection("mod_docs").doc(id).update({ downloads: firebase.firestore.FieldValue.increment(1) });
+            window.open(url, '_blank');
         };
 
-        window.deleteDoc = async (id) => {
-            if(confirm("Xóa tài liệu này?")) await db.collection("mod_docs").doc(id).delete();
-        };
-
-        window.handleAction = async (id) => {
-            const docRef = db.collection("mod_docs").doc(id);
-            await docRef.update({ downloads: firebase.firestore.FieldValue.increment(1) });
-            const doc = await docRef.get();
-            window.open(doc.data().data, '_blank');
-        }
-
-        window.onload = init;
+        db.collection("mod_docs").orderBy("downloads", "desc").onSnapshot(snap => {
+            allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            renderDocs();
+        });
     </script>
 </body>
 </html>
